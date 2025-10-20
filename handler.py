@@ -15,7 +15,6 @@ from typing import TypedDict
 # --------- Config (env) ----------
 MODEL_ID = os.environ.get("MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
 ARTIFACT_BUCKET = os.environ["ARTIFACT_BUCKET"]
-ALLOWED_HOSTS = set(json.loads(os.environ.get("ALLOWED_HOSTS", "[]")))  # e.g. ["convertcase.net", "api.github.com"]
 
 bedrock_llm = ChatBedrockConverse(model_id=MODEL_ID, temperature=0.2, max_tokens=2048)
 s3 = boto3.client("s3")
@@ -26,11 +25,10 @@ You are “Digital Worker,” a precise, reliable web-automation agent.
 GOALS
 - Read the user’s instruction & payload (JSON).
 - Plan minimal steps.
-- Use the available tools to browse ONLY allowed hosts, fill forms, click buttons, read page text, take screenshots, or call HTTP APIs.
+- Use the available tools to browse web pages, fill forms, click buttons, read page text, take screenshots, or call HTTP APIs.
 - Return a concise final JSON per the OUTPUT FORMAT.
 
 RULES
-- Never browse or call APIs outside allowed hosts.
 - Prefer stable CSS selectors or obvious label/text alternatives; if a selector fails, try ONE sensible alternative.
 - After each tool call, check page state and continue until the task is satisfied or impossible.
 - Keep actions minimal (no unnecessary navigation, no repeated clicks).
@@ -86,20 +84,10 @@ def get_browser():
         browser_singleton["session"] = Browser().__enter__()
     return browser_singleton["session"]
 
-def host_is_allowed(url: str) -> bool:
-    try:
-        from urllib.parse import urlparse
-        host = (urlparse(url).hostname or "").lower()
-    except Exception:
-        return False
-    return (not ALLOWED_HOSTS) or (host in ALLOWED_HOSTS)
-
 # --------- Tools (Playwright + HTTP) ----------
 @tool
 def open_url(url: str, wait_for: str = None) -> Dict[str, Any]:
     """Open a page; optionally wait for a CSS selector to appear."""
-    if not host_is_allowed(url):
-        return {"error": f"Host not allowed: {url}"}
     b = get_browser()
     b.page.goto(url, wait_until="domcontentloaded", timeout=30000)
     if wait_for:
@@ -138,9 +126,7 @@ def screenshot() -> Dict[str, Any]:
 
 @tool
 def api_request(url: str, method: str = "GET", headers: Dict[str, str] = None, body_json: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Make an HTTP(S) request to an allowed host."""
-    if not host_is_allowed(url):
-        return {"error": f"Host not allowed: {url}"}
+    """Make an HTTP(S) request."""
     headers = headers or {}
     method = (method or "GET").upper()
     try:
@@ -150,6 +136,8 @@ def api_request(url: str, method: str = "GET", headers: Dict[str, str] = None, b
         return {"status":"error", "message": str(e)}
 
 TOOLS = [open_url, fill_form, click, get_text, screenshot, api_request]
+
+# Bind tools to Bedrock (Converse)
 llm = bedrock_llm.bind_tools(TOOLS)
 
 # --------- LangGraph state & nodes ----------
@@ -159,7 +147,6 @@ class AgentState(TypedDict):
 def agent_node(state: AgentState) -> AgentState:
     """Ask the model. It may answer directly or request tools."""
     response = llm.invoke(state["messages"])
-    # LangChain returns an AIMessage; keep a dict representation for consistency
     state["messages"].append({"role": "assistant", "content": response.content, "raw": response})
     return state
 
@@ -221,9 +208,7 @@ def lambda_handler(event, context):
         # Run the LangGraph loop (agent ↔ tools) until finish
         state = app.invoke({"messages": messages})
 
-        # Expect the last assistant message to contain the final JSON
-        # (Per system prompt, the model must return ONLY the JSON object)
-        # We do a light parse to ensure it's JSON; if not, return raw.
+        # Expect the last assistant message to contain the final JSON string
         final_msg = None
         for m in reversed(state["messages"]):
             if m["role"] == "assistant":
