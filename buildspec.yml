@@ -1,0 +1,26 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_TAG: latest
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - REGION=$(aws configure get region || echo ap-northeast-1)
+      - REPO_URI=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/digital-worker
+      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+  build:
+    commands:
+      - echo Build started on `date`
+      - docker build -t digital-worker:${IMAGE_TAG} .
+      - docker tag digital-worker:${IMAGE_TAG} ${REPO_URI}:${IMAGE_TAG}
+  post_build:
+    commands:
+      - echo Pushing image to ECR...
+      - docker push ${REPO_URI}:${IMAGE_TAG}
+      - printf '{"ImageURI":"%s:%s"}' "${REPO_URI}" "${IMAGE_TAG}" > imageDetail.json
+artifacts:
+  files:
+    - imageDetail.json
