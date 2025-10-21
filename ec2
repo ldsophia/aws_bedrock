@@ -2,3 +2,21 @@ sudo apt-get update -y
 sudo apt-get install -y docker.io zip
 sudo usermod -aG docker $USER
 newgrp docker
+
+mkdir -p ~/layer-build && cd ~/layer-build
+cat > build.sh <<'EOF'
+set -e
+python -m pip install --upgrade pip
+# 仅安装库，不下载浏览器二进制
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+pip install --no-cache-dir playwright -t python/
+# 可选：瘦身
+command -v strip >/dev/null 2>&1 && find python -name '*.so' -exec strip -s {} + || true
+zip -r9 layer-playwright-py312.zip python
+EOF
+chmod +x build.sh
+
+# 在 Lambda 官方基础镜像里运行构建脚本（关键一步）
+docker run --rm -v "$PWD":/var/task public.ecr.aws/lambda/python:3.12 \
+  /bin/bash -lc "bash /var/task/build.sh"
+
