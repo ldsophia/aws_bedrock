@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "LambdaLogs",
+    "Effect": "Allow",
+    "Action": [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ],
+    "Resource": "arn:aws:logs:*:*:*"
+  }]
+}
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "AgentCoreBrowserDataPlane",
+    "Effect": "Allow",
+    "Action": [
+      "bedrock-agentcore:StartBrowserSession",
+      "bedrock-agentcore:GetBrowserSession",
+      "bedrock-agentcore:ListBrowserSessions",
+      "bedrock-agentcore:StopBrowserSession"
+    ],
+    "Resource": "*"
+  }]
+}
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "InvokeBedrockModel",
+    "Effect": "Allow",
+    "Action": [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ],
+    "Resource": "*"
+  }]
+}
