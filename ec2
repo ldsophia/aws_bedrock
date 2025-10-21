@@ -20,3 +20,4 @@ chmod +x build.sh
 docker run --rm -v "$PWD":/var/task public.ecr.aws/lambda/python:3.12 \
   /bin/bash -lc "bash /var/task/build.sh"
 
+aws s3 cp layer-playwright-py312.zip s3://<你的桶>/layers/layer-playwright-py312.zip
