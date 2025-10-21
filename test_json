@@ -1,0 +1,8 @@
+{
+  "instruction": "Open https://convertcase.net/, paste payload.text into the main textarea, then take a screenshot.",
+  "payload": [
+    {"client_id": "1", "name": "jack"},
+    {"client_id": "2", "name": "name"}
+  ],
+  "payloadText": "jack, name"
+}
