@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+  build:
+    commands:
+      - echo "Building Chromium layer in Docker..."
+      - docker build -t chromium-layer:latest .
+      - echo "Extracting layer zip from the image..."
+      - CID=$(docker create chromium-layer:latest)
+      - docker cp $CID:/chromium-layer.zip ./chromium-layer.zip
+      - docker rm $CID
+artifacts:
+  files:
+    - chromium-layer.zip
