@@ -1,0 +1,7 @@
+from playwright.sync_api import sync_playwright
+
+def lambda_layer_smoketest(event, context):
+    # 仅验证导入成功；不要调用 launch（我们用远程浏览器）
+    with sync_playwright() as p:
+        engines = [e.name for e in [p.chromium, p.firefox, p.webkit]]
+    return {"ok": True, "engines": engines}
