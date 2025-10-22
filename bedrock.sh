@@ -11,3 +11,5 @@ pip3.12 install --no-cache-dir bedrock-agentcore -t python/
 
 # 打包
 zip -r9 layer-bedrock-agentcore-py312.zip python
+
+aws s3 cp layer-bedrock-agentcore-py312.zip s3://<你的桶>/layers/layer-bedrock-agentcore-py312
