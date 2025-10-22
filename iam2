@@ -37,3 +37,12 @@
     "Resource": "*"
   }]
 }
+{
+      "Sid": "AgentCoreBrowserStreams",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:ConnectBrowserAutomationStream",
+        "bedrock-agentcore:ConnectBrowserLiveViewStream"
+      ],
+      "Resource": "*"
+    }
